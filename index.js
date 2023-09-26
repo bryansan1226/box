@@ -145,6 +145,21 @@ const getUser = async (req, res) => {
   }
 };
 
+const newPost = async (req, res) => {
+  const { user_id, content, media, created_at } = req.body;
+  const query =
+    "INSERT INTO posts (user_id, content, media, created_at) VALUES ($1,$2,$3,$4)";
+  pool
+    .query(query, [user_id, content, media, created_at])
+    .then(() => {
+      res.status(200).json({ message: "Post successfully created." });
+    })
+    .catch((error) => {
+      console.error("Error inserting data:", error);
+      res.status(500).json({ error: "An error occured while inserting data." });
+    });
+};
+
 app.get("/", (req, res) => {
   res.send("Hello World!");
 });
@@ -153,6 +168,7 @@ app.post("/api/createAccount", createAccount);
 //If verifyToken encounters an error(e.g. it is unable to verify the user information) getUser will not run
 app.get("/api/user", verifyToken, getUser);
 app.post("/api/login", login);
+app.post("/api/newPost", newPost);
 app.listen(PORT, () => {
   console.log(`Server listening on the port  ${PORT}`);
 });
