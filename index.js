@@ -145,6 +145,20 @@ const getUser = async (req, res) => {
   }
 };
 
+const getUserPosts = async (req, res) => {
+  try {
+    const query = "SELECT * FROM posts WHERE user_id = $1";
+    const user_id = req.params.user_id;
+    console.log("User ID is:" + user_id);
+    const result = await pool.query(query, [user_id]);
+    console.log(result.rows);
+    res.status(200).json(result);
+  } catch (error) {
+    console.error("Error finding posts by user_id", error);
+    throw error;
+  }
+};
+
 const newPost = async (req, res) => {
   const { user_id, content, media, created_at } = req.body;
   const query =
@@ -169,6 +183,8 @@ app.post("/api/createAccount", createAccount);
 app.get("/api/user", verifyToken, getUser);
 app.post("/api/login", login);
 app.post("/api/newPost", newPost);
+app.get("/api/getUserPosts/:user_id", getUserPosts);
+
 app.listen(PORT, () => {
   console.log(`Server listening on the port  ${PORT}`);
 });
