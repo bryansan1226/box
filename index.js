@@ -174,6 +174,22 @@ const newPost = async (req, res) => {
     });
 };
 
+const searchUser = async (req, res) => {
+  try {
+    const query = `SELECT * FROM users
+    WHERE username ILIKE $1
+    OR first_name ILIKE $1
+    OR last_name ILIKE $1
+    OR (first_name || ' ' || last_name) ILIKE $1`;
+    const searchQuery = req.params.searchQuery;
+    const result = await pool.query(query, [searchQuery]);
+    res.status(200).json(result);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+};
+
 app.get("/", (req, res) => {
   res.send("Hello World!");
 });
@@ -184,6 +200,7 @@ app.get("/api/user", verifyToken, getUser);
 app.post("/api/login", login);
 app.post("/api/newPost", newPost);
 app.get("/api/getUserPosts/:user_id", getUserPosts);
+app.get("/api/search/users/:searchQuery", searchUser);
 
 app.listen(PORT, () => {
   console.log(`Server listening on the port  ${PORT}`);
