@@ -189,6 +189,35 @@ const searchUser = async (req, res) => {
     res.status(500).json({ error: "Internal server error" });
   }
 };
+const newFollow = async (req, res) => {
+  const { user_id, follower_id, created_at } = req.body;
+  const query =
+    "INSERT INTO followers (user_id, follower_user_id, created_at) VALUES ($1,$2,$3)";
+  pool
+    .query(query, [user_id, follower_id, created_at])
+    .then(() => {
+      res.status(200).json({ message: "Follow successful." });
+    })
+    .catch((error) => {
+      console.error("Error inserting data:", error);
+      res.status(500).json({ error: "An error occured while inserting data." });
+    });
+};
+
+const following = async (req, res) => {
+  try {
+    const query =
+      "SELECT * FROM followers WHERE user_id = $1 AND follower_user_id=$2";
+    const user_id = req.params.user_id;
+    const follower_id = req.params.follower_id;
+    const result = await pool.query(query, [user_id, follower_id]);
+    console.log(result.rows);
+    res.status(200).json(result);
+  } catch (error) {
+    console.error("Error finding follow relationship", error);
+    throw error;
+  }
+};
 
 app.get("/", (req, res) => {
   res.send("Hello World!");
@@ -201,6 +230,8 @@ app.post("/api/login", login);
 app.post("/api/newPost", newPost);
 app.get("/api/getUserPosts/:user_id", getUserPosts);
 app.get("/api/search/users/:searchQuery", searchUser);
+app.post("/api/newFollow", newFollow);
+app.get("/api/following/:user_id/:follower_id", following);
 
 app.listen(PORT, () => {
   console.log(`Server listening on the port  ${PORT}`);
