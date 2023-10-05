@@ -203,6 +203,22 @@ const newFollow = async (req, res) => {
       res.status(500).json({ error: "An error occured while inserting data." });
     });
 };
+const unfollow = async (req, res) => {
+  const { user_id, follower_id } = req.body;
+  const query =
+    "DELETE FROM followers WHERE user_id = $1 AND follower_user_id=$2";
+  pool
+    .query(query, [user_id, follower_id])
+    .then(() => {
+      res.status(200).json({
+        message: "Unfollow successful.",
+      });
+    })
+    .catch((error) => {
+      console.error("Error deleting data: ", error);
+      res.status(500).json({ error: "An error occured while deleting data." });
+    });
+};
 
 const following = async (req, res) => {
   try {
@@ -231,6 +247,7 @@ app.post("/api/newPost", newPost);
 app.get("/api/getUserPosts/:user_id", getUserPosts);
 app.get("/api/search/users/:searchQuery", searchUser);
 app.post("/api/newFollow", newFollow);
+app.delete("/api/unfollow", unfollow);
 app.get("/api/following/:user_id/:follower_id", following);
 
 app.listen(PORT, () => {
