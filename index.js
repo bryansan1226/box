@@ -158,6 +158,22 @@ const getUserPosts = async (req, res) => {
     throw error;
   }
 };
+const getFollowingPosts = async (req, res) => {
+  try {
+    const query = `SELECT *
+    FROM posts
+    RIGHT JOIN followers ON posts.user_id = followers.user_id
+    WHERE followers.follower_user_id = $1`;
+    const user_id = req.params.user_id;
+    console.log("User ID is:" + user_id);
+    const result = await pool.query(query, [user_id]);
+    console.log(result.rows);
+    res.status(200).json(result);
+  } catch (error) {
+    console.error("Error finding posts by user_id", error);
+    throw error;
+  }
+};
 
 const newPost = async (req, res) => {
   const { user_id, content, media, created_at } = req.body;
@@ -219,6 +235,19 @@ const unfollow = async (req, res) => {
       res.status(500).json({ error: "An error occured while deleting data." });
     });
 };
+const findByUserID = async (req, res) => {
+  try {
+    const query = "SELECT * FROM users WHERE user_id = $1";
+    const user_id = req.params.user_id;
+    console.log("User ID is:" + user_id);
+    const result = await pool.query(query, [user_id]);
+    console.log(result.rows);
+    res.status(200).json(result.rows[0]);
+  } catch (error) {
+    console.error("Error finding posts by user_id", error);
+    throw error;
+  }
+};
 
 const following = async (req, res) => {
   try {
@@ -245,6 +274,8 @@ app.get("/api/user", verifyToken, getUser);
 app.post("/api/login", login);
 app.post("/api/newPost", newPost);
 app.get("/api/getUserPosts/:user_id", getUserPosts);
+app.get("/api/findByUserID/:user_id", findByUserID);
+app.get("/api/getFollowingPosts/:user_id", getFollowingPosts);
 app.get("/api/search/users/:searchQuery", searchUser);
 app.post("/api/newFollow", newFollow);
 app.delete("/api/unfollow", unfollow);
