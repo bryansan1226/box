@@ -149,9 +149,18 @@ const getUserPosts = async (req, res) => {
   try {
     const query = "SELECT * FROM posts WHERE user_id = $1";
     const user_id = req.params.user_id;
-    console.log("User ID is:" + user_id);
     const result = await pool.query(query, [user_id]);
-    console.log(result.rows);
+    res.status(200).json(result);
+  } catch (error) {
+    console.error("Error finding posts by user_id", error);
+    throw error;
+  }
+};
+const getComments = async (req, res) => {
+  try {
+    const query = "SELECT * FROM comments WHERE post_id = $1";
+    const post_id = req.params.post_id;
+    const result = await pool.query(query, [post_id]);
     res.status(200).json(result);
   } catch (error) {
     console.error("Error finding posts by user_id", error);
@@ -165,9 +174,7 @@ const getFollowingPosts = async (req, res) => {
     RIGHT JOIN followers ON posts.user_id = followers.user_id
     WHERE followers.follower_user_id = $1`;
     const user_id = req.params.user_id;
-    console.log("User ID is:" + user_id);
     const result = await pool.query(query, [user_id]);
-    console.log(result.rows);
     res.status(200).json(result);
   } catch (error) {
     console.error("Error finding posts by user_id", error);
@@ -183,6 +190,21 @@ const newPost = async (req, res) => {
     .query(query, [user_id, content, media, created_at])
     .then(() => {
       res.status(200).json({ message: "Post successfully created." });
+    })
+    .catch((error) => {
+      console.error("Error inserting data:", error);
+      res.status(500).json({ error: "An error occured while inserting data." });
+    });
+};
+
+const newComment = async (req, res) => {
+  const { post_id, user_id, content, created_at } = req.body;
+  const query =
+    "INSERT INTO comments (post_id, user_id, content, created_at) VALUES ($1,$2,$3,$4)";
+  pool
+    .query(query, [post_id, user_id, content, created_at])
+    .then(() => {
+      res.status(200).json({ message: "Comment successfully created." });
     })
     .catch((error) => {
       console.error("Error inserting data:", error);
@@ -273,7 +295,9 @@ app.post("/api/createAccount", createAccount);
 app.get("/api/user", verifyToken, getUser);
 app.post("/api/login", login);
 app.post("/api/newPost", newPost);
+app.post("/api/newComment", newComment);
 app.get("/api/getUserPosts/:user_id", getUserPosts);
+app.get("/api/getComments/:post_id", getComments);
 app.get("/api/findByUserID/:user_id", findByUserID);
 app.get("/api/getFollowingPosts/:user_id", getFollowingPosts);
 app.get("/api/search/users/:searchQuery", searchUser);
