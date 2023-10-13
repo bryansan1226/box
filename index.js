@@ -167,6 +167,17 @@ const getComments = async (req, res) => {
     throw error;
   }
 };
+const getLikes = async (req, res) => {
+  try {
+    const query = "SELECT * FROM likes WHERE post_id = $1";
+    const post_id = req.params.post_id;
+    const result = await pool.query(query, [post_id]);
+    res.status(200).json(result);
+  } catch (error) {
+    console.error("Error finding posts by user_id", error);
+    throw error;
+  }
+};
 const getFollowingPosts = async (req, res) => {
   try {
     const query = `SELECT *
@@ -241,6 +252,35 @@ const newFollow = async (req, res) => {
       res.status(500).json({ error: "An error occured while inserting data." });
     });
 };
+const likePost = async (req, res) => {
+  const { post_id, user_id, created_at } = req.body;
+  const query =
+    "INSERT INTO likes (post_id, user_id, created_at) VALUES ($1,$2,$3)";
+  pool
+    .query(query, [post_id, user_id, created_at])
+    .then(() => {
+      res.status(200).json({ message: "Like successful." });
+    })
+    .catch((error) => {
+      console.error("Error inserting data:", error);
+      res.status(500).json({ error: "An error occured while inserting data." });
+    });
+};
+const dislikePost = async (req, res) => {
+  const { user_id, post_id } = req.body;
+  const query = "DELETE FROM likes WHERE user_id = $1 AND post_id=$2";
+  pool
+    .query(query, [user_id, post_id])
+    .then(() => {
+      res.status(200).json({
+        message: "dislike successful.",
+      });
+    })
+    .catch((error) => {
+      console.error("Error deleting data: ", error);
+      res.status(500).json({ error: "An error occured while deleting data." });
+    });
+};
 const unfollow = async (req, res) => {
   const { user_id, follower_id } = req.body;
   const query =
@@ -298,6 +338,9 @@ app.post("/api/newPost", newPost);
 app.post("/api/newComment", newComment);
 app.get("/api/getUserPosts/:user_id", getUserPosts);
 app.get("/api/getComments/:post_id", getComments);
+app.get("/api/getLikes/:post_id", getLikes);
+app.post("/api/likePost", likePost);
+app.delete("/api/dislikePost", dislikePost);
 app.get("/api/findByUserID/:user_id", findByUserID);
 app.get("/api/getFollowingPosts/:user_id", getFollowingPosts);
 app.get("/api/search/users/:searchQuery", searchUser);
