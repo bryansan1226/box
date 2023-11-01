@@ -30,7 +30,7 @@ const verifyToken = async (req, res, next) => {
     const decoded = await promisify(jwt.verify)(token, SECRET_KEY);
     req.user = decoded;
     //To be removed, for testing purposes
-    console.log("In verify token req.user is showing as:", req.user);
+    //console.log("In verify token req.user is showing as:", req.user);
     next();
   } catch (error) {
     console.error(error);
@@ -156,6 +156,36 @@ const getUserPosts = async (req, res) => {
     throw error;
   }
 };
+const getMessages = async (req, res) => {
+  try {
+    const query = `SELECT messages.*, users.first_name, users.last_name
+    FROM messages
+    LEFT JOIN users ON messages.sender_id = users.user_id
+    WHERE messages.receiver_id = $1 OR messages.sender_id=$1;`;
+    const user_id = req.params.user_id;
+    const result = await pool.query(query, [user_id]);
+    res.status(200).json(result);
+  } catch (error) {
+    console.error("Error finding messages for user_id", error);
+    throw error;
+  }
+};
+const getConversation = async (req, res) => {
+  try {
+    const { user_id, conversation_id } = req.query;
+    //console.log(user_id, conversation_id);
+    const query = `SELECT messages.*, users.first_name, users.last_name
+    FROM messages
+    LEFT JOIN users ON messages.sender_id = users.user_id
+    WHERE (messages.receiver_id = $1 AND messages.sender_id =$2) OR (messages.receiver_id=$2 AND messages.sender_id=$1);`;
+    const result = await pool.query(query, [user_id, conversation_id]);
+    //console.log(result);
+    res.status(200).json(result);
+  } catch (error) {
+    console.error("Error finding conversation", error);
+    throw error;
+  }
+};
 const getComments = async (req, res) => {
   try {
     const query = "SELECT * FROM comments WHERE post_id = $1";
@@ -205,6 +235,23 @@ const newPost = async (req, res) => {
     .catch((error) => {
       console.error("Error inserting data:", error);
       res.status(500).json({ error: "An error occured while inserting data." });
+    });
+};
+
+const newMessage = async (req, res) => {
+  const { sender_id, receiver_id, content, created_at } = req.body;
+  const query =
+    "INSERT INTO messages (sender_id, receiver_id, content, created_at,is_read) VALUES ($1,$2,$3,$4,$5)";
+  pool
+    .query(query, [sender_id, receiver_id, content, created_at, false])
+    .then(() => {
+      res.status(200).json({ message: "Message sent" });
+    })
+    .catch((error) => {
+      console.error("Error sending message:", error);
+      res
+        .status(500)
+        .json({ error: "An error occured while sending message." });
     });
 };
 
@@ -301,9 +348,9 @@ const findByUserID = async (req, res) => {
   try {
     const query = "SELECT * FROM users WHERE user_id = $1";
     const user_id = req.params.user_id;
-    console.log("User ID is:" + user_id);
+    // console.log("User ID is:" + user_id);
     const result = await pool.query(query, [user_id]);
-    console.log(result.rows);
+    // console.log(result.rows);
     res.status(200).json(result.rows[0]);
   } catch (error) {
     console.error("Error finding posts by user_id", error);
@@ -318,7 +365,23 @@ const following = async (req, res) => {
     const user_id = req.params.user_id;
     const follower_id = req.params.follower_id;
     const result = await pool.query(query, [user_id, follower_id]);
-    console.log(result.rows);
+    // console.log(result.rows);
+    res.status(200).json(result);
+  } catch (error) {
+    console.error("Error finding follow relationship", error);
+    throw error;
+  }
+};
+const getFollowing = async (req, res) => {
+  try {
+    //const query = "SELECT * FROM followers WHERE follower_user_id=$1";
+    const query = `SELECT followers.*, users.first_name, users.last_name
+    FROM followers
+    LEFT JOIN users ON followers.user_id = users.user_id
+    WHERE followers.follower_user_id = $1;`;
+    const follower_id = req.params.follower_id;
+    const result = await pool.query(query, [follower_id]);
+    // console.log(result.rows);
     res.status(200).json(result);
   } catch (error) {
     console.error("Error finding follow relationship", error);
@@ -337,6 +400,8 @@ app.post("/api/login", login);
 app.post("/api/newPost", newPost);
 app.post("/api/newComment", newComment);
 app.get("/api/getUserPosts/:user_id", getUserPosts);
+app.get("/api/getMessages/:user_id", getMessages);
+app.get("/api/getConversation", getConversation);
 app.get("/api/getComments/:post_id", getComments);
 app.get("/api/getLikes/:post_id", getLikes);
 app.post("/api/likePost", likePost);
@@ -347,6 +412,8 @@ app.get("/api/search/users/:searchQuery", searchUser);
 app.post("/api/newFollow", newFollow);
 app.delete("/api/unfollow", unfollow);
 app.get("/api/following/:user_id/:follower_id", following);
+app.get("/api/getFollowing/:follower_id", getFollowing);
+app.post("/api/newMessage", newMessage);
 
 app.listen(PORT, () => {
   console.log(`Server listening on the port  ${PORT}`);
