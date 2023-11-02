@@ -170,6 +170,33 @@ const getMessages = async (req, res) => {
     throw error;
   }
 };
+const getNewMessages = async (req, res) => {
+  try {
+    const query = `SELECT messages.*
+    FROM messages
+    WHERE messages.receiver_id = $1 AND messages.is_read=false;`;
+    const user_id = req.params.user_id;
+    const result = await pool.query(query, [user_id]);
+    res.status(200).json(result);
+  } catch (error) {
+    console.error("Error finding messages for user_id", error);
+    throw error;
+  }
+};
+const getNotifications = async (req, res) => {
+  try {
+    const query = `SELECT notifications.*
+    FROM notifications
+    WHERE notifications.user_id = $1;`;
+    const user_id = req.params.user_id;
+    const result = await pool.query(query, [user_id]);
+    res.status(200).json(result);
+  } catch (error) {
+    console.error("Error finding messages for user_id", error);
+    throw error;
+  }
+};
+
 const getConversation = async (req, res) => {
   try {
     const { user_id, conversation_id } = req.query;
@@ -186,6 +213,30 @@ const getConversation = async (req, res) => {
     throw error;
   }
 };
+const setMessagesAsRead = async (req, res) => {
+  try {
+    const { receiver_id } = req.body;
+    const query = "UPDATE messages SET is_read = true WHERE receiver_id = $1";
+    await pool.query(query, [receiver_id]);
+    res.status(200).json({ message: "Messages updated successfully." });
+  } catch (error) {
+    console.error("Error updating message:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+};
+
+const setNotificationsAsRead = async (req, res) => {
+  try {
+    const { user_id } = req.body;
+    const query = "UPDATE notifications SET is_read = true WHERE user_id = $1";
+    await pool.query(query, [user_id]);
+    res.status(200).json({ message: "Notifications updated successfully." });
+  } catch (error) {
+    console.error("Error updating notifications:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+};
+
 const getComments = async (req, res) => {
   try {
     const query = "SELECT * FROM comments WHERE post_id = $1";
@@ -263,6 +314,21 @@ const newComment = async (req, res) => {
     .query(query, [post_id, user_id, content, created_at])
     .then(() => {
       res.status(200).json({ message: "Comment successfully created." });
+    })
+    .catch((error) => {
+      console.error("Error inserting data:", error);
+      res.status(500).json({ error: "An error occured while inserting data." });
+    });
+};
+
+const newNotification = async (req, res) => {
+  const { user_id, content, created_at, is_read } = req.body;
+  const query =
+    "INSERT INTO notifications (user_id, content, created_at,is_read) VALUES ($1,$2,$3,$4)";
+  pool
+    .query(query, [user_id, content, created_at, is_read])
+    .then(() => {
+      res.status(200).json({ message: "Notification successfully created." });
     })
     .catch((error) => {
       console.error("Error inserting data:", error);
@@ -399,9 +465,14 @@ app.get("/api/user", verifyToken, getUser);
 app.post("/api/login", login);
 app.post("/api/newPost", newPost);
 app.post("/api/newComment", newComment);
+app.post("/api/newNotification", newNotification);
 app.get("/api/getUserPosts/:user_id", getUserPosts);
 app.get("/api/getMessages/:user_id", getMessages);
+app.get("/api/getNewMessages/:user_id", getNewMessages);
+app.get("/api/getNotifications/:user_id", getNotifications);
 app.get("/api/getConversation", getConversation);
+app.put("/api/setMessagesAsRead", setMessagesAsRead);
+app.put("/api/setNotificationsAsRead", setNotificationsAsRead);
 app.get("/api/getComments/:post_id", getComments);
 app.get("/api/getLikes/:post_id", getLikes);
 app.post("/api/likePost", likePost);
